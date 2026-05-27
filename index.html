@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Mission Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🦞</span>
+                <span class="logo-text">OpenClaw</span>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-item active" data-screen="home">
+                    <span class="nav-icon">🏠</span>
+                    <span>Mission Control</span>
+                </div>
+                <div class="nav-item" data-screen="office">
+                    <span class="nav-icon">🏢</span>
+                    <span>Visual Office</span>
+                </div>
+                <div class="nav-item" data-screen="tasks">
+                    <span class="nav-icon">📋</span>
+                    <span>Tasks</span>
+                </div>
+                <div class="nav-item" data-screen="calendar">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </div>
+                <div class="nav-item" data-screen="memory">
+                    <span class="nav-icon">🧠</span>
+                    <span>Memory</span>
+                </div>
+                <div class="nav-item" data-screen="scripts">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Scripts</span>
+                </div>
+                <div class="nav-item" data-screen="team">
+                    <span class="nav-icon">👥</span>
+                    <span>Team</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot online"></span>
+                    <span>Connected</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="breadcrumbs">
+                    <span id="current-screen">Mission Control</span>
+                </div>
+                <div class="top-actions">
+                    <button class="btn btn-refresh" onclick="refreshData()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+            </header>
+
+            <!-- Screen: Home -->
+            <div id="screen-home" class="screen active">
+                <div class="dashboard-grid">
+                    <!-- Stats Cards -->
+                    <div class="card stats-card">
+                        <div class="card-header">
+                            <h3>📊 Agent Overview</h3>
+                            <span class="badge badge-active">LIVE</span>
+                        </div>
+                        <div class="stats-grid" id="stats-grid">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Active Agents -->
+                    <div class="card agents-card">
+                        <div class="card-header">
+                            <h3>🤖 Active Crew</h3>
+                        </div>
+                        <div class="agent-list" id="agent-list">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Tasks -->
+                    <div class="card tasks-card">
+                        <div class="card-header">
+                            <h3>📋 Recent Tasks</h3>
+                        </div>
+                        <div class="task-list" id="task-list">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Next Events -->
+                    <div class="card events-card">
+                        <div class="card-header">
+                            <h3>📅 Upcoming Events</h3>
+                        </div>
+                        <div class="event-list" id="event-list">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Visual Office -->
+            <div id="screen-office" class="screen">
+                <div class="office-container">
+                    <div class="office-header">
+                        <h2>🏢 Visual Office</h2>
+                        <p class="office-subtitle">Real-time agent activity monitor</p>
+                    </div>
+                    
+                    <div class="office-grid" id="office-grid">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Tasks -->
+            <div id="screen-tasks" class="screen">
+                <div class="tasks-container">
+                    <h2>📋 Task Board</h2>
+                    <div class="kanban-board" id="kanban-board">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Calendar -->
+            <div id="screen-calendar" class="screen">
+                <div class="calendar-container">
+                    <h2>📅 Calendar</h2>
+                    <div class="calendar-placeholder">
+                        <p>Calendar view coming in Phase 2</p>
+                        <div class="placeholder-visual">📅</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Memory -->
+            <div id="screen-memory" class="screen">
+                <div class="memory-container">
+                    <h2>🧠 Memory</h2>
+                    <div class="memory-placeholder">
+                        <p>Memory journal coming in Phase 2</p>
+                        <div class="placeholder-visual">🧠</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Scripts -->
+            <div id="screen-scripts" class="screen">
+                <div class="scripts-container">
+                    <h2>⚙️ Background Scripts</h2>
+                    <div class="scripts-toolbar">
+                        <button class="btn btn-refresh" onclick="loadScripts()">
+                            <span>🔄</span> Refresh
+                        </button>
+                        <div class="scripts-filters">
+                            <select id="script-filter" onchange="filterScripts()">
+                                <option value="all">All Scripts</option>
+                                <option value="running">Running</option>
+                                <option value="stopped">Stopped</option>
+                                <option value="cron">Cron Jobs</option>
+                                <option value="python">Python</option>
+                                <option value="powershell">PowerShell</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="scripts-stats" id="scripts-stats">
+                        <!-- Filled by JS -->
+                    </div>
+                    
+                    <div class="scripts-grid" id="scripts-grid">
+                        <!-- Filled by JS -->
+                    </div>
+                    
+                    <div class="scripts-log" id="scripts-log">
+                        <div class="log-header">
+                            <h3>📜 Script Output</h3>
+                            <button class="btn btn-clear" onclick="clearLog()">Clear</button>
+                        </div>
+                        <div class="log-content" id="log-content">
+                            <div class="log-placeholder">Select a script to view output</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Team -->
+            <div id="screen-team" class="screen">
+                <div class="team-container">
+                    <h2>👥 Team</h2>
+                    <div class="team-grid" id="team-grid">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Ticker -->
+        <div class="bottom-ticker">
+            <div class="ticker-content" id="ticker-content">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app-v2.js"></script>
+</body>
+</html>
