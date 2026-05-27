@@ -1,5 +1,6 @@
 // ── CONFIG ──
-const API_BASE = 'http://localhost:3333/api';
+const API_BASE = 'http://127.0.0.1:3333/api';
+const API_KEY = 'mission-control-local';
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 // ── STATE ──
@@ -64,7 +65,11 @@ function switchScreen(screen) {
 // ── API CALLS ──
 async function fetchAPI(endpoint) {
   try {
-    const response = await fetch(`${API_BASE}${endpoint}`);
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: {
+        'x-api-key': API_KEY
+      }
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -86,33 +91,37 @@ async function loadAgents() {
 // ── LOAD STATS ──
 async function loadStats() {
   const data = await fetchAPI('/stats');
-  if (!data) return;
+  if (!data) {
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--pink);">OFFLINE</div>
+        <div class="stat-label">Backend Status</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--text-muted);">-</div>
+        <div class="stat-label">Start backend to see data</div>
+      </div>
+    `;
+    return;
+  }
   
   const statsGrid = document.getElementById('stats-grid');
   statsGrid.innerHTML = `
     <div class="stat-item">
-      <div class="stat-value" style="color: var(--cyan);">${data.agents_total || 0}</div>
-      <div class="stat-label">Total Agents</div>
+      <div class="stat-value" style="color: var(--green);">ONLINE</div>
+      <div class="stat-label">Backend Status</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" style="color: var(--green);">${data.agents_active || 0}</div>
-      <div class="stat-label">Active Now</div>
+      <div class="stat-value" style="color: var(--cyan);">${data.memory.percent}%</div>
+      <div class="stat-label">Memory Used</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" style="color: var(--amber);">${data.agents_standby || 0}</div>
-      <div class="stat-label">On Standby</div>
+      <div class="stat-value" style="color: var(--purple);">${data.cpu.cores}</div>
+      <div class="stat-label">CPU Cores</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" style="color: var(--cyan);">${data.cron_jobs_total || 0}</div>
-      <div class="stat-label">Cron Jobs</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-value" style="color: var(--green);">${data.cron_jobs_healthy || 0}</div>
-      <div class="stat-label">Healthy</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-value" style="color: var(--purple);">${data.skills_installed || 0}</div>
-      <div class="stat-label">Skills</div>
+      <div class="stat-value" style="color: var(--amber);">${data.uptime}</div>
+      <div class="stat-label">System Uptime</div>
     </div>
   `;
 }
@@ -351,118 +360,103 @@ function formatTimeUntil(date) {
 
 // ── BACKGROUND SCRIPTS MONITOR ──
 
-// Mock data for scripts (replace with real API calls)
 async function fetchScripts() {
-  // Try to get real process data via API
-  const data = await fetchAPI('/processes');
-  if (data) return data;
+  // Get real process data from backend
+  const [pythonProcs, nodeProcs, psProcs, sysStats] = await Promise.all([
+    fetchAPI('/scripts'),
+    fetchAPI('/node-processes'),
+    fetchAPI('/powershell-processes'),
+    fetchAPI('/stats')
+  ]);
   
-  // Fallback: return mock data
-  return [
-    {
-      id: 'gmail-check',
-      name: 'Gmail Checker',
-      description: 'Checks unread Gmail and sends notifications',
-      status: 'running',
-      type: 'cron',
-      language: 'python',
-      pid: 12345,
-      startTime: '2026-05-27T07:00:00Z',
-      lastRun: '2026-05-27T11:00:00Z',
-      nextRun: '2026-05-27T12:00:00Z',
-      schedule: 'Every hour',
-      uptime: '4h 23m',
-      memory: '24MB',
-      cpu: '0.5%',
-      log: [
-        { time: '11:00:02', level: 'info', message: 'Checked Gmail: 0 new messages' },
-        { time: '10:00:01', level: 'info', message: 'Checked Gmail: 2 new messages (filtered)' },
-        { time: '09:00:03', level: 'info', message: 'Checked Gmail: 1 important message' },
-      ]
-    },
-    {
-      id: 'calendar-sync',
-      name: 'Calendar Sync',
-      description: 'Syncs calendar events and sends reminders',
-      status: 'running',
-      type: 'cron',
-      language: 'python',
-      pid: 12346,
-      startTime: '2026-05-27T07:00:00Z',
-      lastRun: '2026-05-27T11:30:00Z',
-      nextRun: '2026-05-27T12:30:00Z',
-      schedule: 'Every 30 min',
-      uptime: '4h 23m',
-      memory: '18MB',
-      cpu: '0.3%',
-      log: [
-        { time: '11:30:00', level: 'info', message: 'Synced 3 events' },
-        { time: '11:00:00', level: 'warning', message: 'Calendar API rate limit approaching' },
-        { time: '10:30:01', level: 'info', message: 'Synced 2 events' },
-      ]
-    },
-    {
-      id: 'heartbeat-check',
-      name: 'Heartbeat Monitor',
-      description: 'Monitors system health and agent status',
+  const allScripts = [];
+  
+  // Combine all process types
+  if (pythonProcs) {
+    pythonProcs.forEach(p => {
+      allScripts.push({
+        id: `python-${p.pid}`,
+        name: p.name,
+        description: p.commandLine || 'Python script',
+        status: 'running',
+        type: 'python',
+        language: 'python',
+        pid: p.pid,
+        memory: p.memory,
+        cpu: '-',
+        uptime: '-',
+        schedule: 'On demand',
+        log: [
+          { time: new Date().toISOString(), level: 'info', message: `Process running (PID: ${p.pid})` }
+        ]
+      });
+    });
+  }
+  
+  if (nodeProcs) {
+    nodeProcs.forEach(p => {
+      allScripts.push({
+        id: `node-${p.pid}`,
+        name: p.name,
+        description: 'Node.js process',
+        status: 'running',
+        type: 'service',
+        language: 'node',
+        pid: p.pid,
+        memory: p.memory,
+        cpu: '-',
+        uptime: '-',
+        schedule: 'Continuous',
+        log: [
+          { time: new Date().toISOString(), level: 'info', message: `Node process running (PID: ${p.pid})` }
+        ]
+      });
+    });
+  }
+  
+  if (psProcs) {
+    psProcs.forEach(p => {
+      allScripts.push({
+        id: `ps-${p.pid}`,
+        name: p.name,
+        description: 'PowerShell script',
+        status: 'running',
+        type: 'cron',
+        language: 'powershell',
+        pid: p.pid,
+        memory: p.memory,
+        cpu: '-',
+        uptime: '-',
+        schedule: 'On demand',
+        log: [
+          { time: new Date().toISOString(), level: 'info', message: `PowerShell running (PID: ${p.pid})` }
+        ]
+      });
+    });
+  }
+  
+  // Add system info as a "script"
+  if (sysStats) {
+    allScripts.unshift({
+      id: 'system-info',
+      name: 'System Monitor',
+      description: `System uptime: ${sysStats.uptime}`,
       status: 'running',
       type: 'service',
       language: 'node',
-      pid: 12347,
-      startTime: '2026-05-27T06:00:00Z',
-      lastRun: '2026-05-27T11:58:00Z',
-      nextRun: '2026-05-27T11:59:00Z',
-      schedule: 'Every minute',
-      uptime: '5h 23m',
-      memory: '32MB',
-      cpu: '1.2%',
+      pid: process.pid || 0,
+      memory: sysStats.memory?.used || '0 MB',
+      cpu: sysStats.cpu?.loadAvg?.[0] || '0%',
+      uptime: sysStats.uptime || '-',
+      schedule: 'Continuous',
       log: [
-        { time: '11:58:00', level: 'info', message: 'System healthy - all agents online' },
-        { time: '11:57:00', level: 'info', message: 'System healthy - all agents online' },
-        { time: '11:56:00', level: 'error', message: 'Agent "browser" temporarily offline' },
+        { time: new Date().toISOString(), level: 'info', message: `Memory: ${sysStats.memory?.percent}% used (${sysStats.memory?.used})` },
+        { time: new Date().toISOString(), level: 'info', message: `CPU Load: ${sysStats.cpu?.loadAvg?.join(', ')}` }
       ]
-    },
-    {
-      id: 'weather-update',
-      name: 'Weather Update',
-      description: 'Fetches weather updates for Stockholm',
-      status: 'stopped',
-      type: 'cron',
-      language: 'python',
-      pid: null,
-      startTime: null,
-      lastRun: '2026-05-27T08:00:00Z',
-      nextRun: '2026-05-27T13:00:00Z',
-      schedule: 'Every 5 hours',
-      uptime: '-',
-      memory: '-',
-      cpu: '-',
-      log: [
-        { time: '08:00:00', level: 'info', message: 'Weather: 18°C, Sunny, Stockholm' },
-        { time: '03:00:00', level: 'info', message: 'Weather: 12°C, Cloudy, Stockholm' },
-      ]
-    },
-    {
-      id: 'github-sync',
-      name: 'GitHub Sync',
-      description: 'Syncs GitHub repositories',
-      status: 'running',
-      type: 'service',
-      language: 'powershell',
-      pid: 12348,
-      startTime: '2026-05-27T09:00:00Z',
-      lastRun: '2026-05-27T11:45:00Z',
-      nextRun: 'Continuous',
-      schedule: 'On demand',
-      uptime: '2h 23m',
-      memory: '15MB',
-      cpu: '0.1%',
-      log: [
-        { time: '11:45:00', level: 'info', message: 'Synced rc-setup-web repository' },
-        { time: '11:30:00', level: 'info', message: 'Synced check_gmail.py' },
-      ]
-    }
-  ];
+    });
+  }
+  
+  return allScripts;
 }
 
 async function loadScripts() {
