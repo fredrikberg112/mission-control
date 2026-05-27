@@ -1,0 +1,17 @@
+{
+  "name": "mission-control-backend",
+  "version": "1.0.0",
+  "description": "Secure backend for Mission Control dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --inspect server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "ws": "^8.21.0"
+  },
+  "author": "Bosse",
+  "license": "MIT"
+}
